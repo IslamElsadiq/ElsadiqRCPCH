@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { answerRows, loadLast, questionsByIds, reviewKeys } from '../lib/remote'
+import ReportError from '../components/ReportError'
 import type { RemoteQuestion, SubmitResult } from '../lib/api'
 
 export default function RemoteReview() {
@@ -79,6 +80,7 @@ export default function RemoteReview() {
             })}
             {k?.key_point && <div className="keypoint"><b>Key point:</b> {k.key_point}</div>}
             {k?.reference && <div className="reference">Reference: {k.reference}</div>}
+            <div style={{ marginTop: 10 }}><ReportError questionId={q.id} code={q.code ?? undefined} /></div>
           </div>
         )
       })}
