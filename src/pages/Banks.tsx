@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { questions } from '../data/questions'
 import { createSession, getProgress } from '../lib/store'
+import { createTest, fetchProgress, useRemote } from '../lib/remote'
+import { useEffect } from 'react'
+import { useAuth } from '../lib/auth'
 
 interface Bank {
   id: string
@@ -24,17 +27,30 @@ const tracks = ['MRCPCH']
 
 export default function Banks() {
   const navigate = useNavigate()
-  const p = getProgress()
+  const { loggedIn } = useAuth()
+  const [rp, setRp] = useState<{ attempted: number; accuracy: number; tests: number } | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  useEffect(() => { if (useRemote && loggedIn) fetchProgress().then(setRp).catch(() => {}) }, [loggedIn])
+  const local = getProgress()
+  const p = useRemote ? { attempted: rp?.attempted ?? 0, accuracy: rp?.accuracy ?? 0, testsTaken: rp?.tests ?? 0, unseen: questions.length } : local
   const [track, setTrack] = useState('MRCPCH')
   const [tab, setTab] = useState<'qbank' | 'mock'>('qbank')
   const [search, setSearch] = useState('')
 
   const shown = banks.filter(
-    (b) => b.track === track && b.kind === tab && (!search || b.title.toLowerCase().includes(search.toLowerCase())),
+    (b) => (!useRemote || b.id !== 'nj-hard') && b.track === track && b.kind === tab && (!search || b.title.toLowerCase().includes(search.toLowerCase())),
   )
   const trackBanks = banks.filter((b) => b.track === track)
 
-  function start(b: Bank) {
+  async function start(b: Bank) {
+    if (useRemote) {
+      if (!loggedIn) { navigate('/login'); return }
+      try {
+        await createTest({ mode: b.timedSecPerQ ? 'timed' : 'tutor', count: 20, topicIds: [284], timeLimitSec: b.timedSecPerQ ? b.ids.length * b.timedSecPerQ : null })
+        navigate('/exam/run')
+      } catch (e: any) { setErr(e.message?.includes('no questions') ? 'No published questions yet. They appear after clinical review and publishing.' : e.message) }
+      return
+    }
     createSession(b.timedSecPerQ ? 'timed' : 'tutor', b.ids, b.timedSecPerQ ? b.ids.length * b.timedSecPerQ : null)
     navigate('/exam/run')
   }
@@ -50,7 +66,7 @@ export default function Banks() {
         <div><b>{p.attempted ? `${p.accuracy}%` : '-'}</b><span>accuracy</span></div>
         <div><b>{p.attempted}</b><span>answered</span></div>
         <div><b>{p.testsTaken}</b><span>tests done</span></div>
-        <div><b>{questions.length - p.unseen}/{questions.length}</b><span>seen</span></div>
+        <div><b>{useRemote ? '-' : `${questions.length - p.unseen}/${questions.length}`}</b><span>seen</span></div>
       </div>
 
       <div className="chip-row">
@@ -81,6 +97,7 @@ export default function Banks() {
         <input type="search" placeholder="Search banks" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
+      {err && <p className="small" style={{ color: 'var(--danger)' }}>{err}</p>}
       <div className="bank-grid">
         {shown.length === 0 && <p className="muted">No banks match.</p>}
         {shown.map((b) => (
