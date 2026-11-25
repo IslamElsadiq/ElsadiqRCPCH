@@ -11,6 +11,12 @@ import Review from './pages/Review'
 import Article from './pages/Article'
 import Flashcards from './pages/Flashcards'
 import Banks from './pages/Banks'
+import RequireAuth from './components/RequireAuth'
+import RemoteSetup from './pages/RemoteSetup'
+import RemoteExam from './pages/RemoteExam'
+import RemoteReview from './pages/RemoteReview'
+import RemoteDashboard from './pages/RemoteDashboard'
+import { useRemote } from './lib/remote'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -27,12 +33,12 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Auth mode="login" />} />
         <Route path="/signup" element={<Auth mode="signup" />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={useRemote ? <RequireAuth><RemoteDashboard /></RequireAuth> : <Dashboard />} />
         <Route path="/banks" element={<Banks />} />
         <Route path="/bank" element={<Bank />} />
-        <Route path="/exam" element={<ExamSetup />} />
-        <Route path="/exam/run" element={<Exam />} />
-        <Route path="/exam/review" element={<Review />} />
+        <Route path="/exam" element={useRemote ? <RequireAuth><RemoteSetup /></RequireAuth> : <ExamSetup />} />
+        <Route path="/exam/run" element={useRemote ? <RequireAuth><RemoteExam /></RequireAuth> : <Exam />} />
+        <Route path="/exam/review" element={useRemote ? <RequireAuth><RemoteReview /></RequireAuth> : <Review />} />
         <Route path="/flashcards" element={<Flashcards />} />
         <Route path="/article/:id" element={<Article />} />
         </Route>
