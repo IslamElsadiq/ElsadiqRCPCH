@@ -10,6 +10,7 @@ export default function Auth({ mode }: { mode: 'login' | 'signup' }) {
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -17,17 +18,21 @@ export default function Auth({ mode }: { mode: 'login' | 'signup' }) {
     setError(null)
     if (isDemo) {
       demoLogin()
-      navigate('/dashboard')
+      window.location.assign(import.meta.env.BASE_URL + 'dashboard')
       return
     }
     try {
       if (mode === 'signup') {
-        const { error } = await supabase!.auth.signUp({
+        const { data, error } = await supabase!.auth.signUp({
           email,
           password,
           options: { data: { display_name: name } },
         })
         if (error) throw error
+        if (!data.session) {
+          setNotice('Check your email to confirm the account, then sign in.')
+          return
+        }
       } else {
         const { error } = await supabase!.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -65,22 +70,23 @@ export default function Auth({ mode }: { mode: 'login' | 'signup' }) {
               <label htmlFor="password">Password</label>
               <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
             </div>
+            {notice && <p className="small" style={{ color: 'var(--ok)' }}>{notice}</p>}
             {error && <p className="small" style={{ color: 'var(--danger)' }}>{error}</p>}
             <button className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
               {mode === 'login' ? 'Sign in' : 'Create account'}
             </button>
           </form>
-          <div className="divider">or</div>
+          {isDemo && <><div className="divider">or</div>
           <button
             className="btn btn-outline"
             style={{ width: '100%' }}
             onClick={() => {
               demoLogin()
-              navigate('/dashboard')
+              window.location.assign(import.meta.env.BASE_URL + 'dashboard')
             }}
           >
-            Continue with Google
-          </button>
+            Try the demo without an account
+          </button></>}
           <p className="small muted" style={{ textAlign: 'center', marginTop: 20, marginBottom: 0 }}>
             {mode === 'login' ? (
               <>New here? <Link to="/signup">Create an account</Link></>
