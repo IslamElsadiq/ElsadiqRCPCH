@@ -217,3 +217,34 @@ begin
 end $$;
 revoke execute on function create_test(text,int,int[],int[],boolean,boolean,int) from public, anon;
 grant execute on function create_test(text,int,int[],int[],boolean,boolean,int) to authenticated;
+
+create or replace function review_test(p_test uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_finished timestamptz; r jsonb;
+begin
+  select finished_at into v_finished from tests where id = p_test and user_id = auth.uid();
+  if not found then raise exception 'test not found'; end if;
+  if v_finished is null then raise exception 'test not finished'; end if;
+  select coalesce(jsonb_agg(item order by pos), '[]'::jsonb) into r from (
+    select tq.position as pos, jsonb_build_object(
+      'question_id', q.id,
+      'code', q.code,
+      'stem', q.stem,
+      'your_option_id', a.option_id,
+      'your_label', (select o2.label from options o2 where o2.id = a.option_id),
+      'is_correct', a.is_correct,
+      'correct_label', (select o3.label from options o3 join option_keys k3 on k3.option_id = o3.id where o3.question_id = q.id and k3.is_correct),
+      'options', (select jsonb_agg(jsonb_build_object('id', o.id, 'label', o.label, 'body', o.body, 'is_correct', k.is_correct, 'explanation', k.explanation) order by o.label)
+                  from options o join option_keys k on k.option_id = o.id where o.question_id = q.id),
+      'key_point', q.key_point,
+      'reference', q.reference
+    ) as item
+    from test_questions tq
+    join questions q on q.id = tq.question_id
+    left join lateral (select option_id, is_correct from answers where test_id = p_test and user_id = auth.uid() and question_id = q.id order by answered_at desc limit 1) a on true
+    where tq.test_id = p_test
+  ) s;
+  return r;
+end $$;
+revoke execute on function review_test(uuid) from public, anon;
+grant execute on function review_test(uuid) to authenticated;
