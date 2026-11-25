@@ -45,7 +45,7 @@ export default function RemoteReview() {
           <h3>{correct} of {total} correct</h3>
         </div>
       </div>
-      {noKeys && <p className="small muted">Per-option explanations for timed tests are not available from the server yet. Correct and incorrect marks are shown.</p>}
+      {noKeys && <p className="small muted">Explanations could not be loaded for this test. Correct and incorrect marks are shown.</p>}
       <div className="bank-row">
         {(['all', 'incorrect', 'flagged'] as const).map((f) => (
           <button key={f} className={`badge ${filter === f ? 'badge-brand' : 'badge-muted'}`} style={{ cursor: 'pointer', border: 'none', font: 'inherit', fontSize: 13, padding: '7px 14px' }} onClick={() => setFilter(f)}>
