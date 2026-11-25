@@ -134,10 +134,19 @@ export async function fetchProgress(): Promise<RemoteProgress> {
 }
 
 export async function reviewKeys(testId: string): Promise<Record<string, SubmitResult> | null> {
-  // optional server function for timed tests; absent until the backend adds it
+  // server function: only returns rows for finished tests of the caller
   const { data, error } = await supabase!.rpc('review_test', { p_test: testId })
-  if (error || !data) return null
-  return data as Record<string, SubmitResult>
+  if (error || !Array.isArray(data)) return null
+  const out: Record<string, SubmitResult> = {}
+  for (const r of data as any[]) {
+    out[r.question_id] = {
+      is_correct: !!r.is_correct,
+      options: (r.options ?? []).map((o: any) => ({ label: o.label, is_correct: !!o.is_correct, explanation: o.explanation ?? '' })),
+      key_point: r.key_point ?? '',
+      reference: r.reference ?? '',
+    } as SubmitResult
+  }
+  return out
 }
 
 export async function answerRows(testId: string) {
