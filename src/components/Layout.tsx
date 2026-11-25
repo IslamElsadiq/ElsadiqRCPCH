@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { isDemo } from '../lib/supabase'
-import { demoLogout, isLoggedIn } from '../lib/store'
+import { useAuth } from '../lib/auth'
 
 function themeInit(): 'light' | 'dark' {
   return (localStorage.getItem('elsadiqrcph.theme') as 'light' | 'dark') || 'light'
@@ -9,7 +9,7 @@ function themeInit(): 'light' | 'dark' {
 
 export default function Layout() {
   const [theme, setTheme] = useState<'light' | 'dark'>(themeInit)
-  const [loggedIn, setLoggedIn] = useState(isLoggedIn())
+  const { loggedIn, isStaff, showDrafts, setShowDrafts, signOut } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -46,12 +46,17 @@ export default function Layout() {
             >
               {theme === 'light' ? 'Dark' : 'Light'}
             </button>
+            {isStaff && (
+              <label className="small" style={{ display: 'flex', gap: 6, alignItems: 'center', margin: '0 6px', color: 'var(--accent)', fontWeight: 600 }}>
+                <input type="checkbox" checked={showDrafts} onChange={(e) => setShowDrafts(e.target.checked)} />
+                Show drafts
+              </label>
+            )}
             {loggedIn ? (
               <button
                 className="btn btn-outline btn-sm"
-                onClick={() => {
-                  demoLogout()
-                  setLoggedIn(false)
+                onClick={async () => {
+                  await signOut()
                   navigate('/')
                 }}
               >
